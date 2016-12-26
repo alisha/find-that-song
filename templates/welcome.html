@@ -1,5 +1,16 @@
 <!doctype html>
 <title>Find That Song</title>
 
-<h1>Find That Song</h1>
-<p>Ever had a song stuck in your head, but you remembered part of the lyrics and not the song title? Log in with Spotify to pick which playlist the song is in, then search all the lyrics of that playlist to find your song.</p>
+{% if name %}
+  <h1>Welcome, {{ name }}!</h1>
+{% else %}
+  <h1>Welcome to Find That Song!</h1>
+{% endif %}
+
+<p>Ever had a song stuck in your head, but you remembered part of the lyrics and not the song title? Log in with Spotify to pick which playlist the song is in, then search all the lyrics of that playlist to find your song. <b>Pick a playlist to get started.</b></p>
+
+<ul>
+{% for item in playlists %}
+  <li>{{ item["name"] }}</li>
+{% endfor %}
+</ul>
