@@ -21,9 +21,9 @@ S_API_VERSION = "v1"
 SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, S_API_VERSION)
 
 # Musixmatch URLS
-M_BASE_URL = "http://api.musixmatch.com/ws/"
+M_BASE_URL = "http://api.musixmatch.com/ws"
 M_API_VERSION = "1.1"
-M_API_URL = "{}/{}/".format(M_BASE_URL, M_API_VERSION)
+M_API_URL = "{}/{}".format(M_BASE_URL, M_API_VERSION)
 
 
 # Spotify API keys
@@ -113,7 +113,13 @@ def search(playlist_id):
   for track in playlist_tracks_data["items"]:
     track_name = track["track"]["name"]
     artist_name = track["track"]["artists"][0]["name"]
-    tracks.append((track_name, artist_name))
+    tracks.append([track_name, artist_name, "", ""])
 
+  # Get lyrics to each song
+  for track in tracks:
+    lyrics_api_endpoint = "{}/matcher.lyrics.get".format(M_API_URL)
+    lyrics_response = requests.get(lyrics_api_endpoint, params={'q_track': track[0], 'q_artist': track[1], 'format': 'json', 'apikey': M_KEY})
+    lyrics_data = json.loads(lyrics_response.text)
+    track[2] = lyrics_data
 
   return render_template('search.html', tracks=tracks)
