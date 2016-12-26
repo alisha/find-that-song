@@ -1,0 +1,6 @@
+<!doctype html>
+<title>Find That Song</title>
+
+{% for track in tracks %}
+<p>{{ track[0] }} by {{ track[1] }}</p>
+{% endfor %}

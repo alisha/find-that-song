@@ -10,7 +10,7 @@
 <p>Ever had a song stuck in your head, but you remembered part of the lyrics and not the song title? Log in with Spotify to pick which playlist the song is in, then search all the lyrics of that playlist to find your song. <b>Pick a playlist to get started.</b></p>
 
 <ul>
-{% for item in playlists %}
-  <li>{{ item["name"] }}</li>
+{% for playlist in playlists %}
+  <li><a href="{{ playlist['id'] }}">{{ playlist["name"] }}</a></li>
 {% endfor %}
 </ul>

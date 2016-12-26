@@ -4,7 +4,7 @@ import base64
 import requests
 import json
 import secret # local file that includes API keys
-from flask import Flask, request, redirect, render_template
+from flask import Flask, request, redirect, render_template, session
 from flask_cli import FlaskCLI
 app = Flask('myapp')
 FlaskCLI(app)
@@ -17,8 +17,13 @@ FlaskCLI(app)
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
 SPOTIFY_API_BASE_URL = "https://api.spotify.com"
-API_VERSION = "v1"
-SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, API_VERSION)
+S_API_VERSION = "v1"
+SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, S_API_VERSION)
+
+# Musixmatch URLS
+M_BASE_URL = "http://api.musixmatch.com/ws/"
+M_API_VERSION = "1.1"
+M_API_URL = "{}/{}/".format(M_BASE_URL, M_API_VERSION)
 
 
 # Spotify API keys
@@ -26,7 +31,10 @@ S_ID = secret.S_ID
 S_SECRET = secret.S_SECRET
 
 # Musixmatch API keys
-#M_KEY = secret.M_KEY
+M_KEY = secret.M_KEY
+
+# Session key
+app.secret_key = secret.SESSION_SECRET
 
 
 # Server-side Parameters
@@ -77,16 +85,35 @@ def callback():
   expires_in = response_data["expires_in"]
 
   # Auth Step 6: Use the access token to access Spotify API
-  authorization_header = {"Authorization":"Bearer {}".format(access_token)}
+  session['authorization_header'] = {"Authorization":"Bearer {}".format(access_token)}
 
   # Get user's name
   user_profile_api_endpoint = "{}/me".format(SPOTIFY_API_URL)
-  profile_response = requests.get(user_profile_api_endpoint, headers=authorization_header)
+  profile_response = requests.get(user_profile_api_endpoint, headers=session['authorization_header'])
   profile_data = json.loads(profile_response.text)
+  session['user_id'] = profile_data["id"]
 
   # Get user playlist data
   playlist_api_endpoint = "{}/playlists".format(profile_data["href"])
-  playlists_response = requests.get(playlist_api_endpoint, headers=authorization_header)
+  playlists_response = requests.get(playlist_api_endpoint, headers=session['authorization_header'])
   playlist_data = json.loads(playlists_response.text)
 
   return render_template('welcome.html', name=profile_data["display_name"], playlists=playlist_data["items"])
+
+
+@app.route("/callback/<playlist_id>")
+def search(playlist_id):
+  # Get list of playlist's tracks
+  playlist_tracks_api_endpoint = "{}/users/{}/playlists/{}/tracks".format(SPOTIFY_API_URL, session['user_id'], playlist_id)
+  playlist_tracks_response = requests.get(playlist_tracks_api_endpoint, headers=session['authorization_header'])
+  playlist_tracks_data = json.loads(playlist_tracks_response.text)
+
+  # Create dict with track names and artist names
+  tracks = []
+  for track in playlist_tracks_data["items"]:
+    track_name = track["track"]["name"]
+    artist_name = track["track"]["artists"][0]["name"]
+    tracks.append((track_name, artist_name))
+
+
+  return render_template('search.html', tracks=tracks)
