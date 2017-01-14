@@ -4,6 +4,7 @@ import base64
 import requests
 import json
 import secret # local file that includes API keys
+from bs4 import BeautifulSoup
 from flask import Flask, request, redirect, render_template, session
 app = Flask(__name__)
 
@@ -26,7 +27,6 @@ M_API_URL = "{}/{}".format(M_BASE_URL, M_API_VERSION)
 # Genius URLS
 G_API_URL = "http://api.genius.com"
 
-
 # Spotify API keys
 S_ID = secret.S_ID
 S_SECRET = secret.S_SECRET
@@ -37,6 +37,7 @@ M_KEY = secret.M_KEY
 # Genius API keys
 G_KEY = secret.G_KEY
 G_SECRET = secret.G_SECRET
+G_TOKEN = secret.G_TOKEN
 
 # Session key
 app.secret_key = secret.SESSION_SECRET
@@ -103,7 +104,7 @@ def callback():
   playlists_response = requests.get(playlist_api_endpoint, headers=session['authorization_header'])
   playlist_data = json.loads(playlists_response.text)
 
-  return render_template('welcome.html', name=profile_data["display_name"], playlists=playlist_data["items"])
+  return render_template('welcome.html', name=profile_data["display_name"], playlists=playlist_data["items"], data=playlist_data)
 
 
 @app.route("/callback/<playlist_id>")
@@ -114,6 +115,7 @@ def search(playlist_id):
   playlist_tracks_api_endpoint = "{}/users/{}/playlists/{}/tracks".format(SPOTIFY_API_URL, session['user_id'], playlist_id)
   playlist_tracks_response = requests.get(playlist_tracks_api_endpoint, headers=session['authorization_header'])
   playlist_tracks_data = json.loads(playlist_tracks_response.text)
+
 
   # Can only display 100 tracks at a time
   # So may need to make call multiple times
@@ -133,13 +135,30 @@ def search(playlist_id):
     playlist_tracks_data = json.loads(playlist_tracks_response.text)
   
 
-  '''# Get lyrics to each song
-  for track in tracks:
-    lyrics_api_endpoint = "{}/search".format(G_API_URL)
-    lyrics_response = requests.get(lyrics_api_endpoint, params={'q': "{} {}".format(track[0], track[1])})
-    lyrics_api_endpoint = "{}/matcher.lyrics.get".format(M_API_URL)
-    lyrics_response = requests.get(lyrics_api_endpoint, params={'q_track': track[0], 'q_artist': track[1], 'format': 'json', 'apikey': M_KEY})
-    lyrics_data = json.loads(lyrics_response.text)
-    track[2] = lyrics_data'''
+  # Authenticate Genius
+  session['g_authorization_header'] = {"Authorization":"Bearer {}".format(G_TOKEN)}
 
-  return render_template('search.html', tracks=tracks, data=playlist_tracks_data)
+
+  # Get lyrics to each song
+  for track in tracks:
+    lyrics_id_api_endpoint = "{}/search".format(G_API_URL)
+    lyrics_id_response = requests.get(lyrics_id_api_endpoint, params={'q': "{} {}".format(track[0], track[1])}, headers=session['g_authorization_header'])
+    lyrics_id_data = json.loads(lyrics_id_response.text)
+    track_url = lyrics_id_data["response"]["hits"][0]["result"]["url"]
+
+
+    # Scrape lyrics
+    # Credit: http://www.jw.pe/blog/post/quantifying-sufjan-stevens-with-the-genius-api-and-nltk/
+    lyrics_response = requests.get(track_url)
+    html = lyrics_response.text
+
+    soup = BeautifulSoup(html, 'html.parser')
+
+    lyrics = soup.find(name="lyrics")
+    lyrics.script
+
+    lyrics_text = " / ".join([lyric for lyric in lyrics.stripped_strings])
+    track[2] = lyrics_text
+
+
+  return render_template('search.html', tracks=tracks, response=playlist_tracks_response)

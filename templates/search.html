@@ -1,8 +1,13 @@
 <!doctype html>
 <title>Find That Song</title>
 
+{{ response.encoding }}
+
 <ol>
-{% for track in tracks %}
-<li>{{ track[0] }} by {{ track[1] }}</li>
-{% endfor %}
+  {% for track in tracks %}
+  <li>{{ track[0] }} by {{ track[1] }}
+    <br>
+    {{ track[2] }}
+  </li>
+  {% endfor %}
 </ol>
