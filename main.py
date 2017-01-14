@@ -5,9 +5,7 @@ import requests
 import json
 import secret # local file that includes API keys
 from flask import Flask, request, redirect, render_template, session
-from flask_cli import FlaskCLI
-app = Flask('myapp')
-FlaskCLI(app)
+app = Flask(__name__)
 
 
 # All spotify authentication code from https://github.com/drshrey/spotify-flask-auth-example/blob/master/main.py
@@ -25,6 +23,9 @@ M_BASE_URL = "http://api.musixmatch.com/ws"
 M_API_VERSION = "1.1"
 M_API_URL = "{}/{}".format(M_BASE_URL, M_API_VERSION)
 
+# Genius URLS
+G_API_URL = "http://api.genius.com"
+
 
 # Spotify API keys
 S_ID = secret.S_ID
@@ -32,6 +33,10 @@ S_SECRET = secret.S_SECRET
 
 # Musixmatch API keys
 M_KEY = secret.M_KEY
+
+# Genius API keys
+G_KEY = secret.G_KEY
+G_SECRET = secret.G_SECRET
 
 # Session key
 app.secret_key = secret.SESSION_SECRET
@@ -103,23 +108,38 @@ def callback():
 
 @app.route("/callback/<playlist_id>")
 def search(playlist_id):
+  tracks = []
+
   # Get list of playlist's tracks
   playlist_tracks_api_endpoint = "{}/users/{}/playlists/{}/tracks".format(SPOTIFY_API_URL, session['user_id'], playlist_id)
   playlist_tracks_response = requests.get(playlist_tracks_api_endpoint, headers=session['authorization_header'])
   playlist_tracks_data = json.loads(playlist_tracks_response.text)
 
-  # Create dict with track names and artist names
-  tracks = []
-  for track in playlist_tracks_data["items"]:
-    track_name = track["track"]["name"]
-    artist_name = track["track"]["artists"][0]["name"]
-    tracks.append([track_name, artist_name, "", ""])
+  # Can only display 100 tracks at a time
+  # So may need to make call multiple times
+  while True:
+    # Add track names and artist to dict
+    for track in playlist_tracks_data["items"]:
+      track_name = track["track"]["name"]
+      artist_name = track["track"]["artists"][0]["name"]
+      tracks.append([track_name, artist_name, "", ""])
 
-  # Get lyrics to each song
+    # See if there are more tracks
+    if playlist_tracks_data["next"] == None:
+      break
+
+    # Make next call
+    playlist_tracks_response = requests.get(playlist_tracks_data["next"], headers=session['authorization_header'])
+    playlist_tracks_data = json.loads(playlist_tracks_response.text)
+  
+
+  '''# Get lyrics to each song
   for track in tracks:
+    lyrics_api_endpoint = "{}/search".format(G_API_URL)
+    lyrics_response = requests.get(lyrics_api_endpoint, params={'q': "{} {}".format(track[0], track[1])})
     lyrics_api_endpoint = "{}/matcher.lyrics.get".format(M_API_URL)
     lyrics_response = requests.get(lyrics_api_endpoint, params={'q_track': track[0], 'q_artist': track[1], 'format': 'json', 'apikey': M_KEY})
     lyrics_data = json.loads(lyrics_response.text)
-    track[2] = lyrics_data
+    track[2] = lyrics_data'''
 
-  return render_template('search.html', tracks=tracks)
+  return render_template('search.html', tracks=tracks, data=playlist_tracks_data)
