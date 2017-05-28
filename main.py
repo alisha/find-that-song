@@ -1,3 +1,4 @@
+from __future__ import print_function
 import click
 import urllib
 import base64
@@ -5,6 +6,7 @@ import requests
 import json
 import secret # local file that includes API keys
 from bs4 import BeautifulSoup
+import sys
 from flask import Flask, request, redirect, render_template, session
 app = Flask(__name__)
 
@@ -107,9 +109,13 @@ def callback():
   return render_template('welcome.html', name=profile_data["display_name"], playlists=playlist_data["items"], data=playlist_data)
 
 
-@app.route("/callback/<playlist_id>")
-def search(playlist_id):
+@app.route("/search")
+def search():
   tracks = []
+
+  # Access URL parameters
+  playlist_id = request.args.get('playlist_id', '')
+  query = request.args.get('query', '')
 
   # Get list of playlist's tracks
   playlist_tracks_api_endpoint = "{}/users/{}/playlists/{}/tracks".format(SPOTIFY_API_URL, session['user_id'], playlist_id)
@@ -151,10 +157,10 @@ def search(playlist_id):
     # Credit: http://www.jw.pe/blog/post/quantifying-sufjan-stevens-with-the-genius-api-and-nltk/
     lyrics_response = requests.get(track_url)
     html = lyrics_response.text
-
+    
     soup = BeautifulSoup(html, 'html.parser')
 
-    lyrics = soup.find(name="lyrics")
+    lyrics = soup.find("div", { "class" : "lyrics" })
     lyrics.script
 
     lyrics_text = " / ".join([lyric for lyric in lyrics.stripped_strings])

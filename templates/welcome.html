@@ -7,7 +7,19 @@
   <h1>Welcome to Find That Song!</h1>
 {% endif %}
 
-<p>Ever had a song stuck in your head, but you remembered part of the lyrics and not the song title? Log in with Spotify to pick which playlist the song is in, then search all the lyrics of that playlist to find your song. <b>Pick a playlist to get started.</b></p>
+<p>Ever had a song stuck in your head, but you remembered part of the lyrics and not the song title? Log in with Spotify to pick which playlist the song is in, then search all the lyrics of that playlist to find your song. <b>Fill out the form below to get started.</b></p>
+
+<form action="/search" method="get">
+  <p>Lyrics you know:</p><br>
+  <input type="text" name="query"><br><br>
+
+  <p>Playlist the song is in:</p>
+  {% for playlist in playlists %}
+    <input type="radio" name="playlist_id" value="{{ playlist['id'] }}">{{ playlist["name"] }}<br>
+  {% endfor %}
+
+  <input type="submit" value="Find that song!">
+</form>
 
 <ul>
 {% for playlist in playlists %}
