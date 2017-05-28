@@ -6,6 +6,7 @@ import requests
 import json
 import secret # local file that includes API keys
 from bs4 import BeautifulSoup
+from fuzzywuzzy import fuzz, process
 import sys
 from flask import Flask, request, redirect, render_template, session
 app = Flask(__name__)
@@ -146,6 +147,7 @@ def search():
 
 
   # Get lyrics to each song
+  lyrics_arr = []
   for track in tracks:
     lyrics_id_api_endpoint = "{}/search".format(G_API_URL)
     lyrics_id_response = requests.get(lyrics_id_api_endpoint, params={'q': "{} {}".format(track[0], track[1])}, headers=session['g_authorization_header'])
@@ -165,6 +167,12 @@ def search():
 
     lyrics_text = " / ".join([lyric for lyric in lyrics.stripped_strings])
     track[2] = lyrics_text
+    #print(lyrics_text, file=sys.stderr)
+    lyrics_arr.append(lyrics_text)
+
+  # Search lyrics with fuzzywuzzy
+  #matches = process.extract(query, lyrics_arr, limit=5)
+  #print(matches, file=sys.stderr)
 
 
   return render_template('search.html', tracks=tracks, response=playlist_tracks_response)
