@@ -152,27 +152,29 @@ def search():
     lyrics_id_api_endpoint = "{}/search".format(G_API_URL)
     lyrics_id_response = requests.get(lyrics_id_api_endpoint, params={'q': "{} {}".format(track[0], track[1])}, headers=session['g_authorization_header'])
     lyrics_id_data = json.loads(lyrics_id_response.text)
-    track_url = lyrics_id_data["response"]["hits"][0]["result"]["url"]
+    if lyrics_id_data["meta"]["status"] == 200:
+      track_url = lyrics_id_data["response"]["hits"][0]["result"]["url"]
+      #print(lyrics_id_data["meta"], file=sys.stderr)
 
 
-    # Scrape lyrics
-    # Credit: http://www.jw.pe/blog/post/quantifying-sufjan-stevens-with-the-genius-api-and-nltk/
-    lyrics_response = requests.get(track_url)
-    html = lyrics_response.text
-    
-    soup = BeautifulSoup(html, 'html.parser')
+      # Scrape lyrics
+      # Credit: http://www.jw.pe/blog/post/quantifying-sufjan-stevens-with-the-genius-api-and-nltk/
+      lyrics_response = requests.get(track_url)
+      html = lyrics_response.text
+      
+      soup = BeautifulSoup(html, 'html.parser')
 
-    lyrics = soup.find("div", { "class" : "lyrics" })
-    lyrics.script
+      lyrics = soup.find("div", { "class" : "lyrics" })
+      lyrics.script
 
-    lyrics_text = " / ".join([lyric for lyric in lyrics.stripped_strings])
-    track[2] = lyrics_text
-    #print(lyrics_text, file=sys.stderr)
-    lyrics_arr.append(lyrics_text)
+      lyrics_text = " / ".join([lyric for lyric in lyrics.stripped_strings])
+      track[2] = lyrics_text
+      #print(lyrics_text, file=sys.stderr)
+      lyrics_arr.append(lyrics_text)
 
   # Search lyrics with fuzzywuzzy
-  #matches = process.extract(query, lyrics_arr, limit=5)
-  #print(matches, file=sys.stderr)
+  matches = process.extract(query, lyrics_arr, limit=5)
+  print(matches, file=sys.stderr)
 
 
   return render_template('search.html', tracks=tracks, response=playlist_tracks_response)
