@@ -149,11 +149,19 @@ def search():
   # Get lyrics to each song
   for track in tracks:
     lyrics_id_api_endpoint = "{}/search".format(G_API_URL)
-    lyrics_id_response = requests.get(lyrics_id_api_endpoint, params={'q': "{} {}".format(track[0], track[1])}, headers=session['g_authorization_header'])
-    lyrics_id_data = json.loads(lyrics_id_response.text)
-    if lyrics_id_data["meta"]["status"] == 200:
-      track_url = lyrics_id_data["response"]["hits"][0]["result"]["url"]
 
+    song_name = track[0].encode('utf-8')
+    paren_index = song_name.find('(')
+    if paren_index != -1:
+      song_name = song_name[:paren_index] # Yields more accurate search results
+    artist = track[1].encode('utf-8')
+
+    lyrics_id_response = requests.get(lyrics_id_api_endpoint, params={'q': "{} {}".format(song_name, artist)}, headers=session['g_authorization_header'])
+    lyrics_id_data = json.loads(lyrics_id_response.text)
+    
+    if lyrics_id_data["meta"]["status"] == 200 and len(lyrics_id_data["response"]["hits"]) > 0 and lyrics_id_data["response"]["hits"][0]["result"]["primary_artist"]["name"].encode('utf-8').lower() == artist.lower():
+      
+      track_url = lyrics_id_data["response"]["hits"][0]["result"]["url"]
       # Scrape lyrics
       # Credit: http://www.jw.pe/blog/post/quantifying-sufjan-stevens-with-the-genius-api-and-nltk/
       lyrics_response = requests.get(track_url)
@@ -167,22 +175,27 @@ def search():
       lyrics_text = " / ".join([lyric for lyric in lyrics.stripped_strings])
       track[2] = lyrics_text
 
+    else:
+      track[2] = ""
+
 
   # Search lyrics with regex
   regex_query = regex.compile('(' + query + '){e<=' + str(len(query)/2) + '}', regex.IGNORECASE | regex.BESTMATCH)
   matches = []
 
   for track in tracks:
-    #print("Searching for " + query + " in " + track[0] + " by " + track[1])
     search_obj = regex_query.search(regex.escape(track[2]))
+
     if search_obj:
       if search_obj.fuzzy_counts:
         matches.append([track[0], track[1], track[2], search_obj.fuzzy_counts[0]])
       else:
+        # Perfect match; 0 errors
         matches.append([track[0], track[1], track[2], 0])
 
+  # Sort by number of errors
   matches.sort(key=lambda match: match[3])
 
   best_matches = matches[:6]
 
-  return render_template('search.html', matches=best_matches, response=playlist_tracks_response)
+  return render_template('search.html', matches=best_matches, query=query)
