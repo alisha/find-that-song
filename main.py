@@ -3,6 +3,7 @@ import click
 import urllib
 import base64
 import requests
+import requests_cache
 import json
 import secret # local file that includes API keys
 from bs4 import BeautifulSoup
@@ -14,7 +15,6 @@ app = Flask(__name__)
 
 # All spotify authentication code from https://github.com/drshrey/spotify-flask-auth-example/blob/master/main.py
 
-
 # Spotify URLS
 SPOTIFY_AUTH_URL = "https://accounts.spotify.com/authorize"
 SPOTIFY_TOKEN_URL = "https://accounts.spotify.com/api/token"
@@ -22,20 +22,12 @@ SPOTIFY_API_BASE_URL = "https://api.spotify.com"
 S_API_VERSION = "v1"
 SPOTIFY_API_URL = "{}/{}".format(SPOTIFY_API_BASE_URL, S_API_VERSION)
 
-# Musixmatch URLS
-M_BASE_URL = "http://api.musixmatch.com/ws"
-M_API_VERSION = "1.1"
-M_API_URL = "{}/{}".format(M_BASE_URL, M_API_VERSION)
-
 # Genius URLS
 G_API_URL = "http://api.genius.com"
 
 # Spotify API keys
 S_ID = secret.S_ID
 S_SECRET = secret.S_SECRET
-
-# Musixmatch API keys
-M_KEY = secret.M_KEY
 
 # Genius API keys
 G_KEY = secret.G_KEY
@@ -64,6 +56,9 @@ auth_query_parameters = {
   "show_dialog": SHOW_DIALOG_str,
   "client_id": S_ID
 }
+
+
+requests_cache.install_cache()
 
 
 @app.route('/', methods=['GET', 'POST'])
@@ -148,33 +143,34 @@ def search():
   
   # Get lyrics to each song
   for track in tracks:
-    lyrics_id_api_endpoint = "{}/search".format(G_API_URL)
-
+    # Song info
     song_name = track[0].encode('utf-8')
+    # Remove anything in parentheses from song name
+    # Yields more accurate search results
     paren_index = song_name.find('(')
     if paren_index != -1:
-      song_name = song_name[:paren_index] # Yields more accurate search results
+      song_name = song_name[:paren_index]
     artist = track[1].encode('utf-8')
 
+    # Scrape lyrics
+    # Credit: http://www.jw.pe/blog/post/quantifying-sufjan-stevens-with-the-genius-api-and-nltk/
+    lyrics_id_api_endpoint = "{}/search".format(G_API_URL)
     lyrics_id_response = requests.get(lyrics_id_api_endpoint, params={'q': "{} {}".format(song_name, artist)}, headers=session['g_authorization_header'])
     lyrics_id_data = json.loads(lyrics_id_response.text)
     
+    # Valid response, found lyrics
     if lyrics_id_data["meta"]["status"] == 200 and len(lyrics_id_data["response"]["hits"]) > 0 and lyrics_id_data["response"]["hits"][0]["result"]["primary_artist"]["name"].encode('utf-8').lower() == artist.lower():
-      
       track_url = lyrics_id_data["response"]["hits"][0]["result"]["url"]
-      # Scrape lyrics
-      # Credit: http://www.jw.pe/blog/post/quantifying-sufjan-stevens-with-the-genius-api-and-nltk/
       lyrics_response = requests.get(track_url)
-      html = lyrics_response.text
-      
-      soup = BeautifulSoup(html, 'html.parser')
 
+      soup = BeautifulSoup(lyrics_response.text, 'html.parser')
       lyrics = soup.find("div", { "class" : "lyrics" })
       lyrics.script
-
       lyrics_text = " / ".join([lyric for lyric in lyrics.stripped_strings])
+
       track[2] = lyrics_text
 
+    # No lyrics
     else:
       track[2] = ""
 
