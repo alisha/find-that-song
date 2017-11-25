@@ -1,11 +1,15 @@
 <!doctype html>
 <title>Find That Song</title>
 
+<p><a href="/">Back</a></p>
+
 <h1>Best matches for "{{ query }}"</h1>
 
 <ol>
   {% for match in matches %}
-  <li>{{ match[0] }} by {{ match[1] }}
+  <li>{{ match[1] }} by {{ match[2] }}<br>
+    <iframe src="https://open.spotify.com/embed?uri={{ match[0] }}"
+        frameborder="0" allowtransparency="true"></iframe>
   </li>
   {% endfor %}
 </ol>

@@ -124,9 +124,10 @@ def search():
   while True:
     # Add track names and artist to dict
     for track in playlist_tracks_data["items"]:
+      uri = track["track"]["uri"]
       track_name = track["track"]["name"]
       artist_name = track["track"]["artists"][0]["name"]
-      tracks.append([track_name, artist_name, "", ""])
+      tracks.append([uri, track_name, artist_name, "", ""])
 
     # See if there are more tracks
     if playlist_tracks_data["next"] == None:
@@ -144,13 +145,13 @@ def search():
   # Get lyrics to each song
   for track in tracks:
     # Song info
-    song_name = track[0].encode('utf-8')
+    song_name = track[1].encode('utf-8')
     # Remove anything in parentheses from song name
     # Yields more accurate search results
     paren_index = song_name.find('(')
     if paren_index != -1:
       song_name = song_name[:paren_index]
-    artist = track[1].encode('utf-8')
+    artist = track[2].encode('utf-8')
 
     # Scrape lyrics
     # Credit: http://www.jw.pe/blog/post/quantifying-sufjan-stevens-with-the-genius-api-and-nltk/
@@ -168,11 +169,11 @@ def search():
       lyrics.script
       lyrics_text = " / ".join([lyric for lyric in lyrics.stripped_strings])
 
-      track[2] = lyrics_text
+      track[3] = lyrics_text
 
     # No lyrics
     else:
-      track[2] = ""
+      track[3] = ""
 
 
   # Search lyrics with regex
@@ -180,17 +181,17 @@ def search():
   matches = []
 
   for track in tracks:
-    search_obj = regex_query.search(regex.escape(track[2]))
+    search_obj = regex_query.search(regex.escape(track[3]))
 
     if search_obj:
       if search_obj.fuzzy_counts:
-        matches.append([track[0], track[1], track[2], search_obj.fuzzy_counts[0]])
+        matches.append([track[0], track[1], track[2], track[3], search_obj.fuzzy_counts[0]])
       else:
         # Perfect match; 0 errors
-        matches.append([track[0], track[1], track[2], 0])
+        matches.append([track[0], track[1], track[2], track[3], 0])
 
   # Sort by number of errors
-  matches.sort(key=lambda match: match[3])
+  matches.sort(key=lambda match: match[4])
 
   best_matches = matches[:6]
 
