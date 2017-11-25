@@ -41,7 +41,7 @@ app.secret_key = secret.SESSION_SECRET
 # Server-side Parameters
 CLIENT_SIDE_URL = "http://127.0.0.1"
 PORT = 5000
-REDIRECT_URI = "{}:{}/callback/q".format(CLIENT_SIDE_URL, PORT)
+REDIRECT_URI = "{}:{}".format(CLIENT_SIDE_URL, PORT)
 SCOPE = ""
 STATE = ""
 SHOW_DIALOG_bool = True
@@ -60,36 +60,35 @@ auth_query_parameters = {
 
 requests_cache.install_cache()
 
-
+# Spotify authentication mostly based on: https://github.com/drshrey/spotify-flask-auth-example
 @app.route('/', methods=['GET', 'POST'])
-def auth_spotify():
-  url_args = "&".join(["{}={}".format(key,urllib.quote(val)) for key,val in auth_query_parameters.iteritems()])
-  auth_url = "{}/?{}".format(SPOTIFY_AUTH_URL, url_args)
-  return redirect(auth_url)
+def home():
+  # User has logged in, now store the authorization header
+  if request.args and request.args['code']:
+    auth_token = request.args['code']
+    code_payload = {
+      "grant_type": "authorization_code",
+      "code": str(auth_token),
+      "redirect_uri": REDIRECT_URI
+    }
+    base64encoded = base64.b64encode("{}:{}".format(S_ID, S_SECRET))
+    headers = {"Authorization": "Basic {}".format(base64encoded)}
+    post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload, headers=headers)
 
+    response_data = json.loads(post_request.text)
+    access_token = response_data["access_token"]
+    refresh_token = response_data["refresh_token"]
+    token_type = response_data["token_type"]
+    expires_in = response_data["expires_in"]
 
-@app.route("/callback/q")
-def callback():
-  # Auth Step 4: Requests refresh and access tokens
-  auth_token = request.args['code']
-  code_payload = {
-    "grant_type": "authorization_code",
-    "code": str(auth_token),
-    "redirect_uri": REDIRECT_URI
-  }
-  base64encoded = base64.b64encode("{}:{}".format(S_ID, S_SECRET))
-  headers = {"Authorization": "Basic {}".format(base64encoded)}
-  post_request = requests.post(SPOTIFY_TOKEN_URL, data=code_payload, headers=headers)
+    session['authorization_header'] = {"Authorization":"Bearer {}".format(access_token)}
 
-  # Auth Step 5: Tokens are Returned to Application
-  response_data = json.loads(post_request.text)
-  access_token = response_data["access_token"]
-  refresh_token = response_data["refresh_token"]
-  token_type = response_data["token_type"]
-  expires_in = response_data["expires_in"]
-
-  # Auth Step 6: Use the access token to access Spotify API
-  session['authorization_header'] = {"Authorization":"Bearer {}".format(access_token)}
+  # Need to authenticate user
+  if session['authorization_header'] == None:
+    print("No code, must authenticate")
+    url_args = "&".join(["{}={}".format(key,urllib.quote(val)) for key,val in auth_query_parameters.iteritems()])
+    auth_url = "{}/?{}".format(SPOTIFY_AUTH_URL, url_args)
+    return redirect(auth_url)
 
   # Get user's name
   user_profile_api_endpoint = "{}/me".format(SPOTIFY_API_URL)

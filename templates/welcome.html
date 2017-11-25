@@ -20,9 +20,3 @@
 
   <input type="submit" value="Find that song!">
 </form>
-
-<ul>
-{% for playlist in playlists %}
-  <li><a href="?playlist_id={{ playlist['id'] }}">{{ playlist["name"] }}</a></li>
-{% endfor %}
-</ul>
