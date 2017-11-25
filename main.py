@@ -78,14 +78,14 @@ def home():
     response_data = json.loads(post_request.text)
     access_token = response_data["access_token"]
     refresh_token = response_data["refresh_token"]
+    session['refresh_token'] = refresh_token
     token_type = response_data["token_type"]
     expires_in = response_data["expires_in"]
 
     session['authorization_header'] = {"Authorization":"Bearer {}".format(access_token)}
 
   # Need to authenticate user
-  if session['authorization_header'] == None:
-    print("No code, must authenticate")
+  if 'authorization_header' not in session:
     url_args = "&".join(["{}={}".format(key,urllib.quote(val)) for key,val in auth_query_parameters.iteritems()])
     auth_url = "{}/?{}".format(SPOTIFY_AUTH_URL, url_args)
     return redirect(auth_url)
@@ -117,6 +117,17 @@ def search():
   playlist_tracks_response = requests.get(playlist_tracks_api_endpoint, headers=session['authorization_header'])
   playlist_tracks_data = json.loads(playlist_tracks_response.text)
 
+  # Access token has expired
+  if 'error' in playlist_tracks_data and playlist_tracks_data['error']['status'] == 401 and playlist_tracks_data['error']['message'] == 'The access token expired':
+    # Refresh access token
+    post_request = requests.post(SPOTIFY_TOKEN_URL, headers=session['authorization_header'], grant_type="refresh_token", refresh_token=session['refresh_token'])
+    response_data = json.loads(post_request.text)
+    access_token = response_data['access_token']
+    session['authorization_header'] = {"Authorization":"Bearer {}".format(access_token)}
+
+    # Try again
+    playlist_tracks_response = requests.get(playlist_tracks_api_endpoint, headers=session['authorization_header'])
+    playlist_tracks_data = json.loads(playlist_tracks_response.text)
   
   # Can only display 100 tracks at a time
   # So may need to make call multiple times
