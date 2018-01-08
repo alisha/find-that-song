@@ -1,15 +1,22 @@
 <!doctype html>
-<title>Find That Song</title>
 
-<p><a href="/">Back</a></p>
+<head>
+  <title>Find That Song</title>
 
-<h1>Best matches for "{{ query }}"</h1>
+  <link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.0.0-beta.2/css/bootstrap.min.css" integrity="sha384-PsH8R72JQ3SOdhVi3uxftmaW6Vc51MKb0q5P2rRUpPvrszuE4W1povHYgTpBfshb" crossorigin="anonymous">
+</head>
 
-<ol>
-  {% for match in matches %}
-  <li>{{ match[1] }} by {{ match[2] }}<br>
-    <iframe src="https://open.spotify.com/embed?uri={{ match[0] }}"
-        frameborder="0" allowtransparency="true"></iframe>
-  </li>
-  {% endfor %}
-</ol>
+<body>
+  <p><a href="/">Back</a></p>
+
+  <h1>Best matches for "{{ query }}"</h1>
+
+  <ol>
+    {% for match in matches %}
+    <li>{{ match[1] }} by {{ match[2] }}<br>
+      <iframe src="https://open.spotify.com/embed?uri={{ match[0] }}"
+          frameborder="0" allowtransparency="true"></iframe>
+    </li>
+    {% endfor %}
+  </ol>
+</body>

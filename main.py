@@ -8,7 +8,7 @@ import json
 import secret # local file that includes API keys
 from bs4 import BeautifulSoup
 import sys
-import regex, re
+import regex
 from flask import Flask, request, redirect, render_template, session
 app = Flask(__name__)
 

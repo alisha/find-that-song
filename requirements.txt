@@ -1,0 +1,6 @@
+click
+requests
+requests_cache
+bs4
+regex
+flask
